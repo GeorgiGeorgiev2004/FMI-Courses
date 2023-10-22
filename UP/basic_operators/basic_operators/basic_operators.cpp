@@ -230,6 +230,31 @@ int main()
         }
     }
     break;
+    case 14:
+    {
+        int number = 0;
+        int remainder = 0;
+        string a_f = "ABCDEF";
+        cout << "Enter the number"; cin >> number;
+        string output="";
+        while(number>0)
+        {
+            remainder = number%16;
+            number = number / 16;
+            if (remainder > 9)
+            {
+                remainder -= 9;
+                output = a_f[remainder-1]+output;
+            }
+            else
+            {
+                string remainder_stringified = "";
+                remainder_stringified = remainder + '0';
+                output  =remainder_stringified+output;
+            }
+        }
+        cout << output;
+    }break;
     default:
         break;
     }

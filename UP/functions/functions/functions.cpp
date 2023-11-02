@@ -15,10 +15,7 @@ bool doesTheNumberHaveRepeatingDigits(int num);
 int how_many_numbers_have_this_digit(int n);
 int main()
 {
-	int a = 2;
-	int c = 4;
-	int res = how_many_numbers_have_this_digit(5);
-	cout << "result : " << res;
+
 }
 
 //1 zad

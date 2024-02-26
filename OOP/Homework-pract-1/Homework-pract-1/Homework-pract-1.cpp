@@ -167,10 +167,5 @@ bool IsGraphFull(const Graph& gr)
 
 int main()
 {
-    Graph gr = CreateGraph(2);
-    Peak p1 = { "kiro" };
-    Peak p2 = { "pepi" };
-    Rib r = { p1,p2 };
-    DeleteRib(gr, r);
     return 0;
 }

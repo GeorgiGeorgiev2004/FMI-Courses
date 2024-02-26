@@ -11,6 +11,7 @@ int main()
     cin >> choice;
     switch (choice)
     {
+    case 0:break;
     case 1:
     {
         int number_one = 0;

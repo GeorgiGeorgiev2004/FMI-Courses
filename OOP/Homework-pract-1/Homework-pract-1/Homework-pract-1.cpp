@@ -1,12 +1,12 @@
 #include <iostream>
 int const peakNameMaxChar = 11;
 
-struct Peak 
+struct Peak
 {
     char name[peakNameMaxChar];
 };
 
-struct Rib 
+struct Rib
 {
     Peak peakStart;
     Peak peakEnd;
@@ -22,7 +22,7 @@ struct Graph
 int GetStrLen(const char str[])
 {
     int i = 0;
-    while (str[i]!='\0')
+    while (str[i] != '\0')
     {
         i++;
     }
@@ -44,7 +44,7 @@ bool VerifyRibExist(const Graph& grp, const Rib& rib)
 {
     for (size_t i = 0; i < grp.countOfRibs; i++)
     {
-        if (strcmp(grp.ribs[i].peakStart.name, rib.peakStart.name)==0 && strcmp(grp.ribs[i].peakEnd.name, rib.peakEnd.name)==0)
+        if (strcmp(grp.ribs[i].peakStart.name, rib.peakStart.name) == 0 && strcmp(grp.ribs[i].peakEnd.name, rib.peakEnd.name) == 0)
         {
             return true;
         }
@@ -56,7 +56,7 @@ bool PeakExist(const Graph& grp, const Peak& peak)
 {
     for (size_t i = 0; i < grp.countOfRibs; i++)
     {
-        if (strcmp(grp.ribs[i].peakStart.name, peak.name)==0 || strcmp(grp.ribs[i].peakEnd.name, peak.name)==0)
+        if (strcmp(grp.ribs[i].peakStart.name, peak.name) == 0 || strcmp(grp.ribs[i].peakEnd.name, peak.name) == 0)
         {
             return true;
         }
@@ -64,10 +64,10 @@ bool PeakExist(const Graph& grp, const Peak& peak)
     return false;
 }
 
-void AddRib(Graph& grp,const Peak &p1,const Peak &p2) 
+void AddRib(Graph& grp, const Peak& p1, const Peak& p2)
 {
     Rib rib = { p1,p2 };
-    if (VerifyRibExist(grp,rib))
+    if (VerifyRibExist(grp, rib))
     {
         std::cout << "Such rib exists already!";
         return;
@@ -79,33 +79,13 @@ void AddRib(Graph& grp,const Peak &p1,const Peak &p2)
     grp.countOfRibs += 1;
 }
 
-void DeleteRib(Graph &gr,const Rib &rib) 
-{
-    if (VerifyRibExist(gr,rib)==0)
-    {
-        std::cout << "It's already deleted!";
-        return;
-    }
-    else
-    {
-        for (size_t i = 0; i < gr.countOfRibs; i++)
-        {
-            if (strcmp(gr.ribs[i].peakEnd.name,rib.peakEnd.name)==0 && strcmp(gr.ribs[i].peakStart.name, rib.peakStart.name) == 0)
-            {
-                gr.ribs[i].peakEnd.name = " " ;
-                gr.ribs[i].peakStart.name = " " ;
-            }
-        }
-    }
-}
-
-int FindDegreeOfPeak(const Graph &gr, const Peak &p) 
+int FindDegreeOfPeak(const Graph& gr, const Peak& p)
 {
     int countEntering = 0, countLeaving = 0;
 
     for (size_t i = 0; i < gr.countOfPeaks; i++)
     {
-        if (strcmp(gr.ribs[i].peakEnd.name,p.name)==0)
+        if (strcmp(gr.ribs[i].peakEnd.name, p.name) == 0)
         {
             countEntering++;
         }
@@ -117,53 +97,80 @@ int FindDegreeOfPeak(const Graph &gr, const Peak &p)
     return countEntering + countLeaving;
 }
 
-void FillGraphWithRibs(Graph &gr,const int m) 
+void FillGraphWithRibs(Graph& gr, const int m)
 {
     for (size_t i = 0; i < m; i++)
     {
         Peak peak1, peak2;
-        std::cout << "Please enter the name of the first peak (" << i+1 << ") : ";
+        std::cout << "Please enter the name of the first peak (" << i + 1 << ") : ";
         std::cin >> peak1.name;
-        peak1=ValidatePeak(peak1);
+        peak1 = ValidatePeak(peak1);
 
-        std::cout << "Please enter the name of the secong peak ("<<i+1<<") : ";
+        std::cout << "Please enter the name of the secong peak (" << i + 1 << ") : ";
         std::cin >> peak2.name;
         peak2 = ValidatePeak(peak2);
 
         AddRib(gr, peak1, peak2);
     }
 }
-Graph CreateGraph(const int m) 
+Graph CreateGraph(const int m)
 {
     if (m <= 0)
     {
         std::cout << "Error throw!";
     }
     Rib* ribs = new Rib[m];
-    Graph result = Graph {0,0,ribs};
-    FillGraphWithRibs(result, m);
-    return result;
+    Graph* result = new Graph{ 0,0,ribs };
+    FillGraphWithRibs(*result, m);
+    return *result;
 }
 
-void DeleteGraph(Graph &gr) 
+void DeleteGraph(Graph& gr)
 {
     delete[] gr.ribs;
     gr.countOfPeaks = 0;
     gr.countOfRibs = 0;
 }
 
-bool IsGraphFull(const Graph &gr) 
+Graph DeleteRib(Graph& gr, const Rib& rib)
 {
-    if (gr.countOfPeaks*(gr.countOfPeaks-1)/2==gr.countOfRibs)
+    if (VerifyRibExist(gr, rib) == 0)
+    {
+        std::cout << "It's already deleted!";
+        return Graph{ 0,0,new Rib{Peak{""},Peak{""}} };
+    }
+    else
+    {
+        Rib* ribs = new Rib[gr.countOfRibs - 1];
+        Graph* result = new Graph{ gr.countOfPeaks,gr.countOfRibs,ribs };
+        for (size_t i = 0; i < gr.countOfRibs; i++)
+        {
+            if (strcmp(gr.ribs[i].peakEnd.name, rib.peakEnd.name) == 0 && strcmp(gr.ribs[i].peakStart.name, rib.peakStart.name) == 0)
+            {
+                continue;
+            }
+            result[0].ribs[i] = gr.ribs[i];
+        }
+        DeleteGraph(gr);
+        return *result;
+    }
+}
+
+bool IsGraphFull(const Graph& gr)
+{
+    if (gr.countOfPeaks * (gr.countOfPeaks - 1) / 2 == gr.countOfRibs)
     {
         return true;
     }
     return false;
 }
 
-
 int main()
 {
-
+    Graph gr = CreateGraph(2);
+    Peak p1 = { "kiro" };
+    Peak p2 = { "pepi" };
+    Rib r = { p1,p2 };
+    DeleteRib(gr, r);
     return 0;
 }

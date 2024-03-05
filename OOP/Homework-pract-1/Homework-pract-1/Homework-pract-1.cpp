@@ -120,9 +120,9 @@ Graph CreateGraph(const int m)
         std::cout << "Error throw!";
     }
     Rib* ribs = new Rib[m];
-    Graph* result = new Graph{ 0,0,ribs };
-    FillGraphWithRibs(*result, m);
-    return *result;
+    Graph result = Graph{ 0,0,ribs };
+    FillGraphWithRibs(result, m);
+    return result;
 }
 
 void DeleteGraph(Graph& gr)
@@ -132,27 +132,26 @@ void DeleteGraph(Graph& gr)
     gr.countOfRibs = 0;
 }
 
-Graph DeleteRib(Graph& gr, const Rib& rib)
+void DeleteRib(Graph& gr, const Rib& rib)
 {
     if (VerifyRibExist(gr, rib) == 0)
     {
         std::cout << "It's already deleted!";
-        return Graph{ 0,0,new Rib{Peak{""},Peak{""}} };
+        return ;
     }
     else
     {
         Rib* ribs = new Rib[gr.countOfRibs - 1];
-        Graph* result = new Graph{ gr.countOfPeaks,gr.countOfRibs,ribs };
-        for (size_t i = 0; i < gr.countOfRibs; i++)
+        bool skippedABeat = false;
+        for (size_t i = 0; i < gr.countOfRibs-1;)
         {
-            if (strcmp(gr.ribs[i].peakEnd.name, rib.peakEnd.name) == 0 && strcmp(gr.ribs[i].peakStart.name, rib.peakStart.name) == 0)
+            if (strcmp(gr.ribs[i].peakEnd.name, rib.peakEnd.name) != 0 && strcmp(gr.ribs[i].peakStart.name, rib.peakStart.name) != 0)
             {
-                continue;
+
             }
-            result[0].ribs[i] = gr.ribs[i];
         }
-        DeleteGraph(gr);
-        return *result;
+        gr.countOfRibs -= 1;
+        gr.countOfPeaks -= 2 - PeakExist(gr, rib.peakEnd) + PeakExist(gr, rib.peakStart);
     }
 }
 
@@ -167,10 +166,5 @@ bool IsGraphFull(const Graph& gr)
 
 int main()
 {
-    Graph gr = CreateGraph(2);
-    Peak p1 = { "kiro" };
-    Peak p2 = { "pepi" };
-    Rib r = { p1,p2 };
-    DeleteRib(gr, r);
-    return 0;
+    return -1;
 }

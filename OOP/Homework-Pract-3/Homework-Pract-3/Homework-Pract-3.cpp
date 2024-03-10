@@ -1,22 +1,13 @@
 #include <iostream>
+#include <fstream>
+
 const int MaxPokemonName = 50;
 const int MaxPokemonPower = 100;
 const int MinPokemonPower = 10;
 
-
 //The moment anything is done to this enum the following functions have to be revisited (they will break due to the way they are hard coded):
-//ValidatePokemon,ValidatePokemonType,DisplayTypes(does not break when values of constants are changed. Breaks when new are added),CreateVariation,CreatePokemon.
+//DisplayTypes(does not break when values of constants are changed. Breaks when new are added),CreateVariation,CreatePokemon.
 //Got no idea how to do it better.
-enum Errors 
-{
-    no_error,
-    wrong_Input
-};
-struct Answer 
-{
-    Pokemon p;
-    Errors err;
-};
 enum PokemonVariations
 {
     NORMAL,
@@ -30,17 +21,31 @@ enum PokemonVariations
 
 struct Pokemon 
 {
-    char* name;
+    char name[MaxPokemonName];
     PokemonVariations type;
     int power;
 };
 
 struct PokemonHandler 
 {
-    char* FileName;
+    const char* FileName;
 };
 
-bool ValidatePokemonName(char name[])
+enum Errors 
+{
+    no_error,
+    wrong_Input,
+    file_not_open
+};
+
+struct Answer 
+{
+    Pokemon p;
+    Errors err;
+};
+
+
+bool ValidatePokemonName(const char name[])
 {
     int NameSize = strlen(name);
     if (NameSize > MaxPokemonName)
@@ -57,7 +62,7 @@ bool ValidatePokemonName(char name[])
     return true;
 }
 
-bool ValidatePokemonPower(int power)
+bool ValidatePokemonPower(const int power)
 {
     if (power>MaxPokemonPower)
     {
@@ -72,14 +77,14 @@ bool ValidatePokemonPower(int power)
     return true;
 }
 
-bool ValidatePokemon(char name[], int power )
+bool ValidatePokemon(const char name[], const int power )
 {
     bool ValidName = ValidatePokemonName(name);
     bool ValidPower = ValidatePokemonPower(power);
     return ValidName && ValidPower;
 }
 
-PokemonVariations CreateVariation(int type) 
+PokemonVariations CreateVariation(const int type) 
 {
     PokemonVariations result;
     switch (type)
@@ -120,7 +125,6 @@ void DisplayTypes()
 
 Answer CreatePokemon()
 {
-   
     char name[MaxPokemonName];
     int type;
     int power;
@@ -133,16 +137,165 @@ Answer CreatePokemon()
 
     if (ValidatePokemon(name, power))
     {
-        return Answer{ Pokemon{ name,vr,power},Errors::no_error };
+        Pokemon res = {"",vr,power};
+        strcpy_s(res.name,name);
+        return Answer{res,Errors::no_error};
     }
     return Answer{ Pokemon{},Errors::wrong_Input };
 }
 
-int main()
+Answer CreatePokemonFromBin(std::ifstream &ifs)
 {
-    Answer pmc=CreatePokemon();
-    if (pmc.err==Errors::no_error)
+    //std::fstream ifs(fileName,std::ios::binary | std::ios::in);
+
+    if (!ifs.is_open())
+    {
+        return Answer{ Pokemon{},Errors::file_not_open };
+    }
+
+    Pokemon result{};
+
+    ifs.read(reinterpret_cast<char*>( & result), sizeof(result));
+    ifs.close();
+    PokemonVariations vr = CreateVariation(result.type);
+
+    if (ValidatePokemon(result.name, result.power))
+    {
+        return Answer{ result,Errors::no_error };
+    }
+    return Answer{ Pokemon{},Errors::wrong_Input };
+}
+
+Answer SavePokemonInBin(Pokemon& poke,const char* fileName)
+{
+    std::fstream ofs(fileName,std::ios::binary | std::ios::out | std::ios::app);
+
+    if (!ofs.is_open())
+    {
+        return Answer{ Pokemon{},Errors::file_not_open };
+    }
+
+    ofs.write((char*)&poke, sizeof(poke));
+    ofs.close();
+    return Answer{ Pokemon{},Errors::no_error };
+}
+
+PokemonHandler newPokemonHandler(const char* filename)
+{
+    return PokemonHandler{filename};
+}
+
+int size(const PokemonHandler& ph) 
+{
+    std::ifstream ifs(ph.FileName);
+    if (!ifs.is_open())
+    {
+        return -1;
+    }
+    int currentPos = ifs.tellg();
+    ifs.seekg(0, std::ios::end);
+    int FileSize = ifs.tellg();
+    ifs.seekg(0, currentPos);
+    ifs.close();
+
+    return FileSize/sizeof(Pokemon);
+}
+
+bool ValidIndex(int index,int top,int bot) 
+{
+    if (index>top)
+    {
+        std::cout << "Too high!";
+        return false;
+    }
+    if (index <bot)
+    {
+        std::cout << "Too low!";
+        return false;
+    }
+    return true;
+}
+
+Pokemon at(const PokemonHandler& ph, int i) 
+{
+    std::ifstream ifs(ph.FileName);
+
+    if (!ifs.is_open())
+    {
+        return Pokemon{};
+    }
+
+    int size = ::size(ph);
+    if (ValidIndex(i, size, 0))
+    {
+        int pos = (i-1) * sizeof(Pokemon);
+        ifs.seekg(pos, std::ios::beg);
+        Answer ans = CreatePokemonFromBin(ifs);
+        if (ans.err==Errors::no_error)
+        {
+            return ans.p;
+        }
+    }
+    //Another functional solution!!!!
+    // 
+    //int size = ::size(ph);
+    //if (ValidIndex(i,size,0))
+    //{
+    //    ifs.seekg(0, std::ios::beg);
+    //    for (size_t j = 0; j < size; j++)
+    //    {
+    //        Answer ans = CreatePokemonFromBin(ifs);
+    //        if (ans.err == Errors::no_error)
+    //        {
+    //            if (j == i-1)
+    //            {
+    //                return ans.p;
+    //            }
+    //        }
+    //    }
+    //    ifs.close();
+    //}
+    ifs.close();
+
+}
+
+void swap(const PokemonHandler& ph, int i, int j) 
+{
+    Pokemon pATi = ::at(ph, i);
+    Pokemon pATj = ::at(ph, j);
+    int size = ::size(ph);
+    for (size_t k = 0; k < size; k++)
     {
 
     }
+}
+
+int main()
+{
+    /*
+    Answer ans = CreatePokemon();
+    if (ans.err==Errors::no_error)
+    {
+        //test purposes 'ans' works just as well.
+        Pokemon p = {"ManagarmerTheSecondII",PokemonVariations::FLYING,66};
+        Answer a = SavePokemonInBin(p, "WriteTest.dat");
+        Answer pmc = CreatePokemonFromBin("WriteTest.dat");
+    }
+    */
+
+    Pokemon p = { "ManagarmerTheSecondII",PokemonVariations::FLYING,66 };
+    Answer a = SavePokemonInBin(p, "WriteTest.dat");
+
+    p = { "Gergi",PokemonVariations::WATER,12 };
+    a = SavePokemonInBin(p, "WriteTest.dat");
+
+    p = { "Genadii",PokemonVariations::FLYING,44 };
+    a = SavePokemonInBin(p, "WriteTest.dat");
+
+    PokemonHandler ph = newPokemonHandler("WriteTest.dat");
+    int s = size(ph);
+
+    Pokemon pokemon = at(ph, 2);
+
+    std::cout << s;
 }

@@ -1,6 +1,6 @@
 #include <iostream>
 #include <fstream>
-
+#include <string>
 const int MaxPokemonName = 50;
 const int MaxPokemonPower = 100;
 const int MinPokemonPower = 10;
@@ -156,7 +156,7 @@ Answer CreatePokemonFromBin(std::ifstream &ifs)
     Pokemon result{};
 
     ifs.read(reinterpret_cast<char*>( & result), sizeof(result));
-    ifs.close();
+
     PokemonVariations vr = CreateVariation(result.type);
 
     if (ValidatePokemon(result.name, result.power))
@@ -255,6 +255,7 @@ Pokemon at(const PokemonHandler& ph, int i)
     //    }
     //    ifs.close();
     //}
+
     ifs.close();
 
 }
@@ -264,10 +265,32 @@ void swap(const PokemonHandler& ph, int i, int j)
     Pokemon pATi = ::at(ph, i);
     Pokemon pATj = ::at(ph, j);
     int size = ::size(ph);
+    Pokemon *pokemons = new Pokemon[size];
+    std::ifstream ifs(ph.FileName);
+    ifs.seekg(0, std::ios::beg);
     for (size_t k = 0; k < size; k++)
     {
-
+        Answer ans = CreatePokemonFromBin(ifs);
+        if (ans.err==Errors::no_error)
+        {
+            pokemons[k] = ans.p;
+        }
     }
+    ifs.close();
+    
+    Pokemon temp = {" ",pATi.type,pATi.power};
+    strcpy_s(temp.name, pATi.name);
+    pokemons[i-1]=pATj;
+    pokemons[j-1] = temp;
+
+    std::remove(ph.FileName);
+
+    for (size_t k = 0; k < size; k++)
+    {
+        SavePokemonInBin(pokemons[k], ph.FileName);
+    }
+
+    delete[] pokemons;
 }
 
 int main()
@@ -296,6 +319,9 @@ int main()
     int s = size(ph);
 
     Pokemon pokemon = at(ph, 2);
+
+    swap(ph, 1, 2);
+
 
     std::cout << s;
 }

@@ -1,9 +1,16 @@
 #include <iostream>
 #include <fstream>
 #include <string>
+
 const int MaxPokemonName = 50;
 const int MaxPokemonPower = 100;
 const int MinPokemonPower = 10;
+
+//Dear programmer 
+//When I wrote this code only God 
+//and I knew how it worked
+//Now, only God knows it!
+
 
 //The moment anything is done to this enum the following functions have to be revisited (they will break due to the way they are hard coded):
 //DisplayTypes(does not break when values of constants are changed. Breaks when new are added),CreateVariation,CreatePokemon.
@@ -43,7 +50,6 @@ struct Answer
     Pokemon p;
     Errors err;
 };
-
 
 bool ValidatePokemonName(const char name[])
 {
@@ -146,7 +152,7 @@ Answer CreatePokemon()
 
 Answer CreatePokemonFromBin(std::ifstream &ifs)
 {
-    //std::fstream ifs(fileName,std::ios::binary | std::ios::in);
+    ifs.setstate(std::ios::binary);
 
     if (!ifs.is_open())
     {
@@ -155,7 +161,7 @@ Answer CreatePokemonFromBin(std::ifstream &ifs)
 
     Pokemon result{};
 
-    ifs.read(reinterpret_cast<char*>( & result), sizeof(result));
+    ifs.read((char*) & result, sizeof(result));
 
     PokemonVariations vr = CreateVariation(result.type);
 
@@ -168,6 +174,8 @@ Answer CreatePokemonFromBin(std::ifstream &ifs)
 
 Answer SavePokemonInBin(Pokemon& poke,const char* fileName)
 {
+    //I am aware that the setting has to be std::ios::trunc instead of app but debugging is easier this way 
+    //I will forget to swap it out later (It is what it is)
     std::fstream ofs(fileName,std::ios::binary | std::ios::out | std::ios::app);
 
     if (!ofs.is_open())
@@ -177,7 +185,7 @@ Answer SavePokemonInBin(Pokemon& poke,const char* fileName)
 
     ofs.write((char*)&poke, sizeof(poke));
     ofs.close();
-    return Answer{ Pokemon{},Errors::no_error };
+    return Answer{ Pokemon{"Success",PokemonVariations::NORMAL,1},Errors::no_error};
 }
 
 PokemonHandler newPokemonHandler(const char* filename)
@@ -208,7 +216,7 @@ bool ValidIndex(int index,int top,int bot)
         std::cout << "Too high!";
         return false;
     }
-    if (index <bot)
+    if (index < bot||index<=0)
     {
         std::cout << "Too low!";
         return false;
@@ -216,7 +224,7 @@ bool ValidIndex(int index,int top,int bot)
     return true;
 }
 
-Pokemon at(const PokemonHandler& ph, int i) 
+Pokemon at(const PokemonHandler& ph,const int i) 
 {
     std::ifstream ifs(ph.FileName);
 
@@ -257,49 +265,147 @@ Pokemon at(const PokemonHandler& ph, int i)
     //}
 
     ifs.close();
-
+    return Pokemon{};
 }
 
-void swap(const PokemonHandler& ph, int i, int j) 
+void swap(const PokemonHandler& ph, const int i,const int j) 
 {
     Pokemon pATi = ::at(ph, i);
     Pokemon pATj = ::at(ph, j);
     int size = ::size(ph);
-    Pokemon *pokemons = new Pokemon[size];
-    std::ifstream ifs(ph.FileName);
-    ifs.seekg(0, std::ios::beg);
-    for (size_t k = 0; k < size; k++)
+
+    if (!ValidIndex(i, size, 0))
+    {
+        return;
+    }
+    std::ofstream ofs(ph.FileName,std::ios::in|std::ios::ate| std::ios::binary);
+
+    if (!ofs.is_open())
+    {
+        return;
+    }
+
+    Pokemon temp = {" ",pATi.type,pATi.power};
+    strcpy_s(temp.name, pATi.name);
+
+    int pos1 = (i - 1) * sizeof(Pokemon);
+
+    ofs.seekp(pos1);
+    ofs.write((char*) &pATj,sizeof(Pokemon));
+
+    int pos2 = (j - 1) * sizeof(Pokemon);
+
+    ofs.seekp(pos2);
+    ofs.write((char*)&temp, sizeof(Pokemon));
+
+    ofs.close();
+}
+
+void insert(const PokemonHandler& ph, const Pokemon& pokemon) 
+{
+    std::ofstream ofs(ph.FileName,std::ios::app);
+    if (!ofs.is_open()||!ValidatePokemon(pokemon.name,pokemon.power))
+    {
+        return;
+    }
+    ofs.write((char*)&pokemon, sizeof(pokemon));
+}
+
+
+//should have used fstream
+void textify(const PokemonHandler& ph, const char* filename) 
+{
+    std::ifstream ifs(ph.FileName,std::ios::binary);
+
+    if (!ifs.is_open())
+    {
+        return;
+    }
+
+    int s = size(ph);
+
+    for (size_t i = 0; i < s; i++)
     {
         Answer ans = CreatePokemonFromBin(ifs);
-        if (ans.err==Errors::no_error)
+        if (ans.err == Errors::no_error)
         {
-            pokemons[k] = ans.p;
+            SavePokemonInBin(ans.p,filename);
+        }
+        else
+        {
+            std::cout << "Error reading pokemon from file";
         }
     }
     ifs.close();
-    
-    Pokemon temp = {" ",pATi.type,pATi.power};
-    strcpy_s(temp.name, pATi.name);
-    pokemons[i-1]=pATj;
-    pokemons[j-1] = temp;
-
-    std::remove(ph.FileName);
-
-    for (size_t k = 0; k < size; k++)
-    {
-        SavePokemonInBin(pokemons[k], ph.FileName);
-    }
-
-    delete[] pokemons;
 }
 
+//Yup still no fstream ¯\_(`_`)_/¯ 
+void untextify(const PokemonHandler& ph, const char* filename)
+{
+    std::ifstream ifs(filename, std::ios::binary);
+
+    if (!ifs.is_open())
+    {
+        return;
+    }
+
+    PokemonHandler ph2 = newPokemonHandler(filename);
+    int s = size(ph2);
+
+    //Don't hate the player hate the game :)
+    std::ofstream ofs(ph.FileName,std::ios::trunc);
+    ofs.write((const char*)'\0', 0);
+    ofs.close();
+
+
+    for (size_t i = 0; i < s; i++)
+    {
+        Answer ans = CreatePokemonFromBin(ifs);
+        if (ans.err == Errors::no_error)
+        {
+            SavePokemonInBin(ans.p, ph.FileName);
+        }
+        else
+        {
+            std::cout << "Error reading pokemon from file";
+        }
+    }
+    ifs.close();
+
+}
+
+
+void print(PokemonHandler &ph)
+{
+    std::ifstream ifs(ph.FileName,std::ios::in|std::ios::binary);
+
+    if (!ifs.is_open())
+    {
+        return;
+    }
+    int s = size(ph);
+
+    for (size_t i = 0; i < s; i++)
+    {
+        Answer ans = CreatePokemonFromBin(ifs);
+        if (ans.err == Errors::no_error)
+        {
+            std::cout << ans.p.name << " " << ans.p.type << " " << ans.p.power << "\n";
+        }
+    }
+    std::cout << "\n\n\n";
+    ifs.close();
+
+}
 int main()
 {
+    const char *fileName= "test.dat";
+
     /*
     Answer ans = CreatePokemon();
     if (ans.err==Errors::no_error)
     {
-        //test purposes 'ans' works just as well.
+        //test purposes 'ans.p' works just as well.
         Pokemon p = {"ManagarmerTheSecondII",PokemonVariations::FLYING,66};
         Answer a = SavePokemonInBin(p, "WriteTest.dat");
         Answer pmc = CreatePokemonFromBin("WriteTest.dat");
@@ -307,21 +413,44 @@ int main()
     */
 
     Pokemon p = { "ManagarmerTheSecondII",PokemonVariations::FLYING,66 };
-    Answer a = SavePokemonInBin(p, "WriteTest.dat");
+    Answer a = SavePokemonInBin(p, fileName);
 
     p = { "Gergi",PokemonVariations::WATER,12 };
-    a = SavePokemonInBin(p, "WriteTest.dat");
+    a = SavePokemonInBin(p, fileName);
 
     p = { "Genadii",PokemonVariations::FLYING,44 };
-    a = SavePokemonInBin(p, "WriteTest.dat");
+    a = SavePokemonInBin(p, fileName);
 
-    PokemonHandler ph = newPokemonHandler("WriteTest.dat");
+    PokemonHandler ph = newPokemonHandler(fileName);
     int s = size(ph);
 
     Pokemon pokemon = at(ph, 2);
 
-    swap(ph, 1, 2);
+    print(ph);
 
+    std::cout <<"pokemon at position 2 is: " << pokemon.name << " " << pokemon.type << " " << pokemon.power << "\n\n\n";
 
-    std::cout << s;
+    swap(ph, 1, 3);
+
+    print(ph);
+
+    insert(ph, p);
+
+    print(ph);
+
+    char fil[] = "textify.dat";
+
+    textify(ph, fil);
+
+    PokemonHandler ph2 = newPokemonHandler(fil);
+
+    print(ph2);
+
+    untextify(ph, fil);
+
+    print(ph);
+
+    std::cout <<"\n" << s;
+    std::remove(fileName);
+    std::remove(fil);
 }

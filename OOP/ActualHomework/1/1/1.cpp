@@ -219,4 +219,5 @@ int main()
 	const char* filename = "test.txt";
 	t.ReadTableFromFile(filename);
 	int n = 0;
+	int d = 0;
 }
